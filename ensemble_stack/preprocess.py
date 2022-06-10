@@ -16,7 +16,8 @@ def load_mapper():
 
 
 def one_hot_encode(seq, mapper):
-    one_hot_mat = torch.tensor([mapper[aa] for aa in seq]).T
+    one_hot_mat = torch.stack([torch.stack([_])
+                              for _ in torch.tensor([mapper[aa] for aa in seq]).T])
     return one_hot_mat
 
 
@@ -26,9 +27,11 @@ class FullRegression(Dataset):
             'data/regression/Full Regression/data.tsv', dtype='str')[:, 1]
         enrichment = np.loadtxt(
             'data/regression/Full Regression/data.target')
+        enrichment = enrichment.reshape(enrichment.shape[0], 1)
         mapper = load_mapper()
         self.x = torch.stack([one_hot_encode(seq, mapper) for seq in raw_seqs])
-        self.y = torch.from_numpy(np.vstack([x for x in enrichment]))
+
+        self.y = torch.from_numpy(enrichment)
         self.n_samples = len(raw_seqs)
 
     def __getitem__(self, index):
@@ -43,8 +46,10 @@ class HoldOutRegression(Dataset):
         raw_seqs = np.loadtxt(
             'data/regression/Hold out Regression/data.tsv', dtype='str')[:, 1]
         enrichment = np.loadtxt(
-            'data/regression/Hold out Regression/data.target').flatten()
-        self.x = torch.stack([one_hot_encode(seq) for seq in raw_seqs])
+            'data/regression/Hold out Regression/data.target')
+        enrichment = enrichment.reshape(enrichment.shape[0], 1)
+        mapper = load_mapper()
+        self.x = torch.stack([one_hot_encode(seq, mapper) for seq in raw_seqs])
         self.y = torch.from_numpy(enrichment)
         self.n_samples = len(raw_seqs)
 
@@ -60,7 +65,9 @@ class HoldOutTop(Dataset):
         raw_seqs = np.loadtxt(
             'data/regression/Hold out Top 4%/data.tsv', dtype='str')[:, 1]
         enrichment = np.loadtxt('data/regression/Hold out Top 4%/data.target')
-        self.x = torch.stack([one_hot_encode(seq) for seq in raw_seqs])
+        enrichment = enrichment.reshape(enrichment.shape[0], 1)
+        mapper = load_mapper()
+        self.x = torch.stack([one_hot_encode(seq, mapper) for seq in raw_seqs])
         self.y = torch.from_numpy(enrichment)
         self.n_samples = len(raw_seqs)
 
