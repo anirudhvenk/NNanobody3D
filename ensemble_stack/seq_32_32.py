@@ -1,88 +1,69 @@
-from cProfile import run
 import os
-from turtle import forward
-from webbrowser import get
 import torch
 import torch.optim as optim
 from torch import nn
 from preprocess import FullRegression, HoldOutRegression, HoldOutTop, Validation
 from torch.utils.data import DataLoader
-# from torch.utils.tensorboard import SummaryWriter
+
 
 class Seq_32_32(nn.Module):
     def __init__(self):
         super(Seq_32_32, self).__init__()
-        self.flatten = nn.Flatten()
-        self.linear_relu_stack = nn.Sequential(
+        self.seq_32_32 = nn.Sequential(
+            nn.Flatten(),
             nn.Linear(400, 32),
-            nn.LeakyReLU(),
+            nn.ReLU(),
             nn.Linear(32, 32),
-            nn.LeakyReLU(),
+            nn.ReLU(),
             nn.Linear(32, 1)
         )
-    
+
     def forward(self, x):
-        x = self.flatten(x)
-        x = self.linear_relu_stack(x)
-        return x
-
-model = Seq_32_32()
-optimizer = optim.Adam(model.parameters(), lr=0.001)
-loss_fn = torch.nn.MSELoss()
-training_loader = DataLoader(HoldOutRegression(), batch_size=100, shuffle=False)
-validation_loader = DataLoader(Validation(), batch_size=100, shuffle=False)
-
-def get_n_params(model):
-    pp=0
-    for p in list(model.parameters()):
-        nn=1
-        for s in list(p.size()):
-            nn = nn*s
-        pp += nn
-    return pp
-
-# print(get_n_params(model))
-for epoch in range(20):  # loop over the dataset multiple times
+        return self.seq_32_32(x)
     
-    for i, data in enumerate(training_loader, 0):
-        # get the inputs; data is a list of [inputs, labels]
-        # print(i)
-        inputs, labels = data
 
-        # # zero the parameter gradients
+class Seq_32x1_16(nn.Module):
+    def __init__(self):
+        super(Seq_32x1_16, self) .__init__()
+        self.seq_32x1_16 = nn.Sequential(
+            nn.Conv2d(1, 20, kernel_size=(1, 5), stride=1, padding='same'),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=(1, 2), stride=(1, 2)),
+            nn.Flatten(),
+            nn.Linear(32 * 5, 16),
+            nn.ReLU(),
+            nn.Linear(16, 1)
+        )
+        
+    def forward(self, x):
+        return self.seq_32x1_16(x)
+
+
+model = Seq_32x1_16()
+optimizer = optim.Adam(model.parameters())
+loss_fn = torch.nn.MSELoss()
+training_loader = DataLoader(FullRegression(), batch_size=100, shuffle=True)
+validation_loader = DataLoader(Validation(), batch_size=100, shuffle=True)
+
+
+for epoch in range(20):
+    val_loss = 0.0
+    train_loss = 0.0
+    
+    for step, (inputs, labels) in enumerate(training_loader, 0):
         optimizer.zero_grad()
-
-        # # forward + backward + optimize
         outputs = model(inputs)
         loss = loss_fn(outputs, labels)
         loss.backward()
         optimizer.step()
-        print(loss.item())
         
-    # for i, data in enumerate(validation_loader, 0):
-    #     inputs, labels = data
-    #     outputs = model(inputs)
-    #     val_loss = loss_fn(outputs, labels)
+        train_loss += loss.item()*len(inputs)
         
-    # print(f'epoch: {epoch+1}, loss: {loss.item()}')
-    
-#     print(running_loss)
+    for step, (inputs, labels) in enumerate(validation_loader, 0):
+        outputs = model(inputs)
+        loss = loss_fn(outputs, labels)
+        
+        val_loss += loss.item()*len(inputs)
 
-        # print statistics
-        # running_loss += loss.item()
-        # print(i)
-        # print("hello world")
-        # if i % 100 == 99:    # print every 2000 mini-batches
-        #     print(f'[{epoch + 1}, {i + 1:5d}] loss: {running_loss / 2000:.3f}')
-        #     running_loss = 0.0
-
-# for epoch in range(20):
-#     inputs, labels = next(iter(training_loader))
-#     outputs = model(inputs)
-#     loss = loss_fn(outputs, labels)
-#     loss.backward()
-#     optimizer.step()
-#     print(loss)
-
-# inputs, labels = next(iter(training_loader))
-# print(inputs)
+    print(epoch+1, train_loss / len(validation_loader.sampler))
+    # print(epoch+1, val_loss / len(validation_loader.sampler))
