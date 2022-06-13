@@ -5,6 +5,8 @@ from torch import nn
 from torch.utils.data import DataLoader
 from reg_models import *
 from preprocess import *
+import tqdm
+
 
 def train(model, training_loader, validation_loader):
     optimizer = optim.Adam(model.parameters())
@@ -14,7 +16,7 @@ def train(model, training_loader, validation_loader):
         val_loss = 0.0
         train_loss = 0.0
 
-        for step, (data) in enumerate(training_loader, 0):
+        for step, data in enumerate(training_loader):
             inputs, labels = data
             inputs, labels = inputs.cuda(), labels.cuda()
 
@@ -25,18 +27,20 @@ def train(model, training_loader, validation_loader):
             optimizer.step()
 
             train_loss += loss.item()*len(inputs)
+        
+        with torch.no_grad():
+            for step, data in enumerate(validation_loader):
+                inputs, labels = data
+                inputs, labels = inputs.cuda(), labels.cuda()
 
-        for step, (data) in enumerate(validation_loader, 0):
-            inputs, labels = data
-            inputs, labels = inputs.cuda(), labels.cuda()
+                outputs = model(inputs)
+                loss = loss_fn(outputs, labels)
 
-            outputs = model(inputs)
-            loss = loss_fn(outputs, labels)
-
-            val_loss += loss.item()*len(inputs)
+                val_loss += loss.item()*len(inputs)
 
         print(epoch+1, train_loss / len(training_loader.sampler),  val_loss / len(validation_loader.sampler))
     return model
+
 
 if __name__ == '__main__':
     training_datasets = {
@@ -44,7 +48,7 @@ if __name__ == '__main__':
         'Hold out Regression': DataLoader(HoldOutRegression(), batch_size=100, shuffle=True), 
         'Hold out Top 4%': DataLoader(HoldOutTop(), batch_size=100, shuffle=True)
     }
-    validation_loader = DataLoader(Validation(), batch_size=100, shuffle=True)
+    validation_loader = DataLoader(Validation(), batch_size=100)
 
     for key in training_datasets:
         print('Training Seq_32_32:')
@@ -70,4 +74,3 @@ if __name__ == '__main__':
         print('Training Seq_embed_32x1_16:')
         model = train(Seq_embed_32x1_16().cuda(), training_datasets[key], validation_loader)
         torch.save(model, f'weights/regression/{key}/seq_embed_32x1_16.pt')
-        

@@ -84,6 +84,7 @@ class Validation(Dataset):
             'data/regression/Test set Regression/test.tsv', dtype='str')[:, 1]
         enrichment = np.loadtxt(
             'data/regression/Test set Regression/test_target.txt')
+        enrichment = enrichment.reshape(enrichment.shape[0], 1)
         mapper = load_mapper()
         self.x = torch.stack([one_hot_encode(seq, mapper) for seq in raw_seqs])
         self.y = torch.from_numpy(np.vstack([x for x in enrichment]))

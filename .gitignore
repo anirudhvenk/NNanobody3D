@@ -3,4 +3,4 @@ __pycache__
 ensemble_stack/data
 .DS_Store
 weights
-*/weight
+*/weights
