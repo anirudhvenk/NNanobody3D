@@ -6,6 +6,11 @@ from collections import namedtuple
 
 ReturnType = namedtuple('ReturnType',('nll','ppl','X','X_cdr'), defaults=(None, None, None, None))
 
+if torch.cuda.is_available():
+    device = torch.device('cuda')
+else:
+    device = torch.device('cpu')
+
 # problem: hard to add mask in SVD
 def kabsch(A, B):
     a_mean = A.mean(dim=1, keepdims=True)
@@ -31,14 +36,14 @@ def compute_rmsd(A, B, mask):
 
 def autoregressive_mask(E_idx):
     N_nodes = E_idx.size(1)
-    ii = torch.arange(N_nodes).cuda()
+    ii = torch.arange(N_nodes).to(device)
     ii = ii.view((1, -1, 1))
     mask = E_idx - ii < 0
     return mask.float()
 
 def fit_coords(D, E_idx, mask, lr=2.0, num_steps=200):
     with torch.enable_grad():
-        pred_xyz = torch.randn(D.size(0), D.size(1), 3).cuda()
+        pred_xyz = torch.randn(D.size(0), D.size(1), 3).to(device)
         pred_xyz = pred_xyz.requires_grad_()
         optimizer = torch.optim.Adam([pred_xyz], lr=lr)
         vmask = autoregressive_mask(E_idx) * mask.unsqueeze(-1)
@@ -105,12 +110,12 @@ def self_square_dist(X, mask):
     dX = X.unsqueeze(1) - X.unsqueeze(2)  # [B, 1, N, 3] - [B, N, 1, 3]
     D = torch.sum(dX**2, dim=-1)
     mask_2D = mask.unsqueeze(1) * mask.unsqueeze(2)  # [B, 1, N] x [B, N, 1]
-    mask_2D = mask_2D - torch.eye(mask.size(1))[None,:,:].cuda()
+    mask_2D = mask_2D - torch.eye(mask.size(1))[None,:,:].to(device)
     return D, mask_2D
 
 def get_nei_label(X, mask, K):
     D, mask_2D = pairwise_distance(X, mask)
-    nmask = torch.arange(X.size(1)).cuda()
+    nmask = torch.arange(X.size(1)).to(device)
     nmask = nmask.view(1,-1,1) > nmask.view(1,1,-1)
     nmask = nmask.float() * mask_2D  # [B, N, N]
 
@@ -227,7 +232,7 @@ class PosEmbedding(nn.Module):
         frequency = torch.exp(
             torch.arange(0, self.num_embeddings, 2, dtype=torch.float32)
             * -(np.log(10000.0) / self.num_embeddings)
-        ).cuda()
+        ).to(device)
         angles = E_idx.unsqueeze(-1) * frequency.view((1,1,1,-1))
         E = torch.cat((torch.cos(angles), torch.sin(angles)), -1)
         return E

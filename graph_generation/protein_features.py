@@ -9,7 +9,12 @@ import copy
 
 from matplotlib import pyplot as plt
 
-from structgen.utils import gather_edges, gather_nodes, Normalize
+from graph_generation.utils import gather_edges, gather_nodes, Normalize
+
+if torch.cuda.is_available():
+    device = torch.device('cuda')
+else:
+    device = torch.device('cpu')
 
 
 class PositionalEncodings(nn.Module):
@@ -24,13 +29,13 @@ class PositionalEncodings(nn.Module):
         N_batch = E_idx.size(0)
         N_nodes = E_idx.size(1)
         N_neighbors = E_idx.size(2)
-        ii = torch.arange(N_nodes, dtype=torch.float32).view((1, -1, 1)).cuda()
+        ii = torch.arange(N_nodes, dtype=torch.float32).view((1, -1, 1)).to(device)
         d = (E_idx.float() - ii).unsqueeze(-1)
         # Original Transformer frequencies
         frequency = torch.exp(
             torch.arange(0, self.num_embeddings, 2, dtype=torch.float32)
             * -(np.log(10000.0) / self.num_embeddings)
-        ).cuda()
+        ).to(device)
         # Grid-aligned
         # frequency = 2. * np.pi * torch.exp(
         #     -torch.linspace(
@@ -68,13 +73,15 @@ class ProteinFeatures(nn.Module):
         
     def _dist(self, X, mask, eps=1E-6):
         """ Pairwise euclidean distances """
+        # print(X.shape)
         N = X.size(1)
         mask_2D = torch.unsqueeze(mask,1) * torch.unsqueeze(mask,2)
+        # print(mask_2D)
         if self.direction == 'bidirectional':
-            mask_2D = mask_2D - torch.eye(N).unsqueeze(0).cuda()  # remove self
+            mask_2D = mask_2D - torch.eye(N).unsqueeze(0).to(device)  # remove self
             mask_2D = mask_2D.clamp(min=0)
         elif self.direction == 'forward':
-            nmask = torch.arange(X.size(1)).cuda()
+            nmask = torch.arange(X.size(1)).to(device)
             nmask = nmask.view(1,-1,1) > nmask.view(1,1,-1)
             mask_2D = nmask.float() * mask_2D  # [B, N, N]
         else:
@@ -82,7 +89,7 @@ class ProteinFeatures(nn.Module):
 
         dX = torch.unsqueeze(X,1) - torch.unsqueeze(X,2)
         D = mask_2D * torch.sqrt(torch.sum(dX**2, 3) + eps)
-
+        # print(X.shape)
         # Identify k nearest neighbors (not including self)
         D_adjust = D + (1. - mask_2D) * 10000
         top_k = min(self.top_k, N)
@@ -106,7 +113,7 @@ class ProteinFeatures(nn.Module):
     def _rbf(self, D):
         # Distance radial basis function
         D_min, D_max, D_count = 0., 20., self.num_rbf
-        D_mu = torch.linspace(D_min, D_max, D_count).cuda()
+        D_mu = torch.linspace(D_min, D_max, D_count).to(device)
         D_mu = D_mu.view([1,1,1,-1])
         D_sigma = (D_max - D_min) / D_count
         D_expand = torch.unsqueeze(D, -1)
@@ -336,9 +343,12 @@ class ProteinFeatures(nn.Module):
         """ Featurize coordinates as an attributed graph """
         # Build k-Nearest Neighbors graph
         X_ca = X[:,:,1,:]
+        # print(X_ca.shape)
         D_neighbors, E_idx, mask_neighbors = self._dist(X_ca, mask)
         RBF = self._rbf(D_neighbors)
         E_positional = self.embeddings(E_idx)
+        # print(E_positional)
+        # print(mask)
 
         # Pairwise and triplet features
         O_features, F_norms, F_features = self._orientations_coarse(X_ca, E_idx)

@@ -2,7 +2,12 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-from structgen.utils import *
+from graph_generation.utils import *
+
+if torch.cuda.is_available():
+    device = torch.device('cuda')
+else:
+    device = torch.device('cpu')
 
 
 class MPNEncoder(nn.Module):
@@ -30,7 +35,7 @@ class MPNEncoder(nn.Module):
 
     def autoregressive_mask(self, E_idx):
         N_nodes = E_idx.size(1)
-        ii = torch.arange(N_nodes).cuda()
+        ii = torch.arange(N_nodes).to(device)
         ii = ii.view((1, -1, 1))
         mask = E_idx - ii < 0
         return mask.float()

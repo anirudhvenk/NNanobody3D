@@ -2,11 +2,12 @@ import torch
 import torch.nn.functional as F
 from torch.utils.data import Dataset
 import numpy as np
+import os
 
 
-def load_mapper():
+def load_mapper(path):
     mapper = {}
-    with open('data/regression/mapper', 'r') as f:
+    with open(path, 'r') as f:
         for x in f:
             line = x.strip().split()
             word = line[0]
@@ -24,11 +25,11 @@ def one_hot_encode(seq, mapper):
 class FullRegression(Dataset):
     def __init__(self):
         raw_seqs = np.loadtxt(
-            'data/regression/Full Regression/data.tsv', dtype='str')[:, 1]
+            'data/Full Regression/data.tsv', dtype='str')[:, 1]
         enrichment = np.loadtxt(
-            'data/regression/Full Regression/data.target')
+            'data/Full Regression/data.target')
         enrichment = enrichment.reshape(enrichment.shape[0], 1)
-        mapper = load_mapper()
+        mapper = load_mapper('data/mapper')
         self.x = torch.stack([one_hot_encode(seq, mapper) for seq in raw_seqs])
 
         self.y = torch.from_numpy(enrichment)
@@ -44,11 +45,11 @@ class FullRegression(Dataset):
 class HoldOutRegression(Dataset):
     def __init__(self):
         raw_seqs = np.loadtxt(
-            'data/regression/Hold out Regression/data.tsv', dtype='str')[:, 1]
+            'data/Hold out Regression/data.tsv', dtype='str')[:, 1]
         enrichment = np.loadtxt(
-            'data/regression/Hold out Regression/data.target')
+            'data/Hold out Regression/data.target')
         enrichment = enrichment.reshape(enrichment.shape[0], 1)
-        mapper = load_mapper()
+        mapper = load_mapper('data/mapper')
         self.x = torch.stack([one_hot_encode(seq, mapper) for seq in raw_seqs])
         self.y = torch.from_numpy(enrichment)
         self.n_samples = len(raw_seqs)
@@ -63,10 +64,10 @@ class HoldOutRegression(Dataset):
 class HoldOutTop(Dataset):
     def __init__(self):
         raw_seqs = np.loadtxt(
-            'data/regression/Hold out Top 4%/data.tsv', dtype='str')[:, 1]
-        enrichment = np.loadtxt('data/regression/Hold out Top 4%/data.target')
+            'data/Hold out Top 4%/data.tsv', dtype='str')[:, 1]
+        enrichment = np.loadtxt('data/Hold out Top 4%/data.target')
         enrichment = enrichment.reshape(enrichment.shape[0], 1)
-        mapper = load_mapper()
+        mapper = load_mapper('data/mapper')
         self.x = torch.stack([one_hot_encode(seq, mapper) for seq in raw_seqs])
         self.y = torch.from_numpy(enrichment)
         self.n_samples = len(raw_seqs)
@@ -81,14 +82,35 @@ class HoldOutTop(Dataset):
 class Validation(Dataset):
     def __init__(self):
         raw_seqs = np.loadtxt(
-            'data/regression/Test set Regression/test.tsv', dtype='str')[:, 1]
+            'data/Test set Regression/test.tsv', dtype='str')[:, 1]
         enrichment = np.loadtxt(
-            'data/regression/Test set Regression/test_target.txt')
+            'data/Test set Regression/test_target.txt')
         enrichment = enrichment.reshape(enrichment.shape[0], 1)
-        mapper = load_mapper()
+        mapper = load_mapper('data/mapper')
         self.x = torch.stack([one_hot_encode(seq, mapper) for seq in raw_seqs])
         self.y = torch.from_numpy(np.vstack([x for x in enrichment]))
         self.n_samples = len(raw_seqs)
+        
+
+    def __getitem__(self, index):
+        return self.x[index].float(), self.y[index].float()
+
+    def __len__(self):
+        return self.n_samples
+    
+    
+class ValidationInterpreter(Dataset):
+    def __init__(self):
+        raw_seqs = np.loadtxt(
+            'regression/data/Test set Regression/test.tsv', dtype='str')[:, 1]
+        enrichment = np.loadtxt(
+            'regression/data/Test set Regression/test_target.txt')
+        enrichment = enrichment.reshape(enrichment.shape[0], 1)
+        mapper = load_mapper('regression/data/mapper')
+        self.x = torch.stack([one_hot_encode(seq, mapper) for seq in raw_seqs])
+        self.y = torch.from_numpy(np.vstack([x for x in enrichment]))
+        self.n_samples = len(raw_seqs)
+        
 
     def __getitem__(self, index):
         return self.x[index].float(), self.y[index].float()

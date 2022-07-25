@@ -3,11 +3,16 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 
-from structgen.encoder import MPNEncoder
-from structgen.data import alphabet
-from structgen.utils import *
-from structgen.protein_features import ProteinFeatures
+from graph_generation.encoder import MPNEncoder
+from graph_generation.data import alphabet
+from graph_generation.utils import *
+from graph_generation.protein_features import ProteinFeatures
 
+if torch.cuda.is_available():
+    device = torch.device('cuda')
+else:
+    device = torch.device('cpu')
+    
 
 class HierarchicalEncoder(nn.Module):
     
@@ -94,7 +99,7 @@ class HierarchicalDecoder(nn.Module):
 
     def init_struct(self, B, N, K):
         # initial V
-        pos = torch.arange(N).cuda()
+        pos = torch.arange(N).to(device)
         V = self.pos_embedding(pos.view(1, N, 1))  # [1, N, 1, 16]
         V = V.squeeze(2).expand(B, -1, -1)  # [B, N, 6]
         # initial E_idx
@@ -161,7 +166,7 @@ class HierarchicalDecoder(nn.Module):
         return bS, bmask, len(LS), len(RS)
 
     def get_completion_mask(self, B, N, cdr_range):
-        cmask = torch.zeros(B, N).cuda()
+        cmask = torch.zeros(B, N).to(device)
         for i, (l,r) in enumerate(cdr_range):
             cmask[i, l:r+1] = 1
         return cmask
@@ -195,6 +200,8 @@ class HierarchicalDecoder(nn.Module):
         true_AD = self.features._AD_features(true_X[:,:,1,:])
         true_D, mask_2D = pairwise_distance(true_X, mask)
         true_D = true_D ** 2
+        # 
+        print(true_X.shape)
 
         # initial loss
         sloss = 0.
@@ -203,10 +210,15 @@ class HierarchicalDecoder(nn.Module):
         dloss = self.huber_loss(D, true_D)
         vloss = self.mse_loss(V, true_V)
         aloss = self.mse_loss(AD, true_AD)
-
+        
+        # print(T_max-T_min+1)
         for t in range(T_min, T_max + 1):
             # Prepare input
             V, E, E_idx = self.features(X, mask)
+            print(V.shape)
+            # print(X.shap  e)
+            # print(V)
+            # print(E)
             hS = self.make_S_blocks(LS, S, RS, T_min, T_max, smask)[0]
 
             # Predict residue t
@@ -236,7 +248,7 @@ class HierarchicalDecoder(nn.Module):
         aloss = torch.sum(aloss * mask.unsqueeze(-1)) / mask.sum()
         sloss = sloss.sum() / cmask.sum()
         loss = sloss + dloss + vloss + aloss
-        return loss, sloss
+        return sloss
 
     def log_prob(self, true_S, true_cdr, mask):
         B, N = mask.size(0), mask.size(1)

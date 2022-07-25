@@ -4,6 +4,11 @@ import numpy as np
 import json, time, copy
 import random
 
+if torch.cuda.is_available():
+    device = torch.device('cuda')
+else:
+    device = torch.device('cpu')
+
 DUMMY = {'pdb': None, 'seq': '#' * 10,
         'coords': {
             "N": np.zeros((10, 3)) + np.nan,
@@ -197,9 +202,9 @@ def completize(batch):
     X[isnan] = 0.
 
     # Conversion
-    S = torch.from_numpy(S).long().cuda()
-    X = torch.from_numpy(X).float().cuda()
-    mask = torch.from_numpy(mask).float().cuda()
+    S = torch.from_numpy(S).long().to(device)
+    X = torch.from_numpy(X).float().to(device)
+    mask = torch.from_numpy(mask).float().to(device)
     return X, S, L, mask
 
 
@@ -229,10 +234,10 @@ def featurize(batch, context=True):
     X[isnan] = 0.
 
     # Conversion
-    S = torch.from_numpy(S).long().cuda()
-    X = torch.from_numpy(X).float().cuda()
-    P = torch.from_numpy(P).float().cuda()
-    mask = torch.from_numpy(mask).float().cuda()
+    S = torch.from_numpy(S).long().to(device)
+    X = torch.from_numpy(X).float().to(device)
+    P = torch.from_numpy(P).float().to(device)
+    mask = torch.from_numpy(mask).float().to(device)
 
     if context:  # extract context
         L_max = max([len(b['context']) for b in batch])
@@ -246,8 +251,8 @@ def featurize(batch, context=True):
             cmask[i, :l] = 1.
             crange[i] = (b['context'].index('#'), b['context'].rindex('#'))
 
-        cmask = torch.from_numpy(cmask).float().cuda()
-        cS = torch.from_numpy(cS).long().cuda()
+        cmask = torch.from_numpy(cmask).float().to(device)
+        cS = torch.from_numpy(cS).long().to(device)
         context = (cS, cmask, crange)
 
     return (X, S, P, mask), context
