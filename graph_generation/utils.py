@@ -251,5 +251,5 @@ if __name__ == "__main__":
             torch.stack([B, C], dim=0),
             mask=torch.ones(2, 3)
     )
-    print(rmsd)
+    # print(rmsd)
 

@@ -201,7 +201,7 @@ class HierarchicalDecoder(nn.Module):
         true_D, mask_2D = pairwise_distance(true_X, mask)
         true_D = true_D ** 2
         # 
-        print(true_X.shape)
+        # print(true_X.shape)
 
         # initial loss
         sloss = 0.
@@ -215,7 +215,7 @@ class HierarchicalDecoder(nn.Module):
         for t in range(T_min, T_max + 1):
             # Prepare input
             V, E, E_idx = self.features(X, mask)
-            print(V.shape)
+            # print(V.shape)
             # print(X.shap  e)
             # print(V)
             # print(E)
@@ -239,9 +239,9 @@ class HierarchicalDecoder(nn.Module):
                 h = self.attention(h, LS, smask, self.W_stc)
                 X, D, V, AD = self.predict_dist(self.O_d(h))
                 X = X.detach().clone()
-                dloss = dloss + self.huber_loss(D, true_D)
-                vloss = vloss + self.mse_loss(V, true_V)
-                aloss = aloss + self.mse_loss(AD, true_AD)
+                # dloss = dloss + self.huber_loss(D, true_D)
+                # vloss = vloss + self.mse_loss(V, true_V)
+                # aloss = aloss + self.mse_loss(AD, true_AD)
 
         dloss = torch.sum(dloss * mask_2D) / mask_2D.sum()
         vloss = torch.sum(vloss * mask.unsqueeze(-1)) / mask.sum()
