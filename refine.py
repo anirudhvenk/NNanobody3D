@@ -14,6 +14,7 @@ import numpy as np
 import argparse
 import os
 import csv
+from generate_seqs import Generator
 
 from graph_generation.data import *
 from graph_generation.hierarchical import *
@@ -25,48 +26,50 @@ if torch.cuda.is_available():
 else:
     device = torch.device('cpu')
 
-train_path = 'graph_generation/data/sabdab/hcdr3_cluster/train_data.jsonl'
-val_path = 'graph_generation/data/sabdab/hcdr3_cluster/val_data.jsonl'
-test_path = 'graph_generation/data/sabdab/hcdr3_cluster/test_data.jsonl'
+# TODO: similarity scoring (alphafold?)
 
-loaders = []
-for path in [train_path, val_path, test_path]:
-    data = AntibodyDataset(path, cdr_type='3')
-    loader = StructureLoader(data.data, batch_tokens=1, interval_sort=3)
-    loaders.append(loader)
+for epoch in range(5):
+    print("Generating sequences...")
+    
+    if epoch == 0:
+        generator = Generator(f'graph_generation/weights/refine/model.init')
+        generator.generate_sequences(100, 0.5, 0)
+        model_ckpt, opt_ckpt, model_args = torch.load(f'graph_generation/weights/refine/model.init', map_location=device)
+    else:
+        generator = Generator(f'graph_generation/weights/refine/model.ckpt.{epoch}')
+        generator.generate_sequences(100, 0.5, epoch)
+        model_ckpt, opt_ckpt, model_args = torch.load(f'graph_generation/weights/refine/model.ckpt.{epoch}', map_location=device)
+        
+    model = HierarchicalDecoder(model_args).to(device)
+    optimizer = torch.optim.Adam(model.parameters())
+    model.load_state_dict(model_ckpt)
+    optimizer.load_state_dict(opt_ckpt)
 
-loader_train, loader_val, loader_test = loaders
+    data = pd.read_csv(f'graph_generation/data/generated/3eak_gen_{epoch}.tsv', sep='\t')
+    generated_sequences = data['cdr3'].tolist()
+    framework = 'QVQLVESGGGLVQPGGSLRLSCAASGGSEYSYSTFSLGWFRQAPGQGLEAVAAIASMGGLTYYADSVKGRFTISRDNSKNTLYLQMNSLRAEDTAVYYCWGQGTLVTVS'
 
-model_ckpt, opt_ckpt, model_args = torch.load('graph_generation/weights/model.best', map_location=device)
-model = HierarchicalDecoder(model_args).to(device)
-optimizer = torch.optim.Adam(model.parameters())
-model.load_state_dict(model_ckpt)
-optimizer.load_state_dict(opt_ckpt)
+    
+    print("Training on previously generated sequences...")
 
-print('Training:{}, Validation:{}, Test:{}'.format(
-    len(loader_train.dataset), len(loader_val.dataset), len(loader_test.dataset))
-)
-
-best_ppl, best_epoch = 100, -1
-for e in range(10):
     model.train()
     meter = 0
-    pbar = tqdm(loader_train)
-    
-    for i, hbatch in enumerate(pbar):
+
+    for i, seq in enumerate(tqdm(generated_sequences)):   
+        full_sequence = f'QVQLVESGGGLVQPGGSLRLSCAASGGSEYSYSTFSLGWFRQAPGQGLEAVAAIASMGGLTYYADSVKGRFTISRDNSKNTLYLQMNSLRAEDTAVYYC{seq}WGQGTLVTVS'
+        cdr3 = ''.join(['3' for _ in range(len(seq))])
+        true_cdr = [f'000000000000000000000000011111111111000000000000000002222222200000000000000000000000000000000000000{cdr3}0000000000']
+        mask = np.ones((1, len(full_sequence)), dtype=np.int32)
+        
         optimizer.zero_grad()
-        hchain = completize(hbatch)
-        if hchain[-1].sum().item() == 0:
-            continue
+        true_S = np.asarray([[alphabet.index(a) for a in full_sequence]], dtype=np.int32)
         
-        print(hchain)
-        
-        loss = model(*hchain)
+        loss = model(torch.from_numpy(true_S).long().to(device), true_cdr, torch.from_numpy(mask).float().to(device))
         loss.backward()
         optimizer.step()
-
-        meter += loss.exp().item()
-        if (i + 1) % 50 == 0:
-            meter /= 50
-            print(f'[{i + 1}] Train Loss = {meter:.3f}')
-            meter = 0
+        
+        meter+=loss.exp().item()
+        
+    print('Loss: ', meter/len(generated_sequences))
+    ckpt = (model.state_dict(), optimizer.state_dict(), model_args)
+    torch.save(ckpt, f'graph_generation/weights/refine/model.ckpt.{epoch + 1}')

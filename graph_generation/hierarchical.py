@@ -177,8 +177,11 @@ class HierarchicalDecoder(nn.Module):
             X[i, l:r+1, :, :] = 0
         return X.clone()
 
-    def forward(self, true_X, true_S, true_cdr, mask):
+    def forward(self, true_S, true_cdr, mask):
         B, N = mask.size(0), mask.size(1)
+        # print(true_cdr)
+        # print(true_S.shape)
+        # print(mask.shape)
         K = min(self.k_neighbors, N)
 
         cdr_range = [(cdr.index(self.cdr_type), cdr.rindex(self.cdr_type)) for cdr in true_cdr]
@@ -195,11 +198,11 @@ class HierarchicalDecoder(nn.Module):
         cmask = torch.cat([cmask.new_zeros(B, offset), cmask[:, T_min:T_max+1], cmask.new_zeros(B, suffix)], dim=1)
 
         # Ground truth 
-        true_X = self.make_X_blocks(true_X, T_min, T_max, smask)
-        true_V = self.features._dihedrals(true_X)
-        true_AD = self.features._AD_features(true_X[:,:,1,:])
-        true_D, mask_2D = pairwise_distance(true_X, mask)
-        true_D = true_D ** 2
+        # true_X = self.make_X_blocks(true_X, T_min, T_max, smask)
+        # true_V = self.features._dihedrals(true_X)
+        # true_AD = self.features._AD_features(true_X[:,:,1,:])
+        # true_D, mask_2D = pairwise_distance(true_X, mask)
+        # true_D = true_D ** 2
         # 
         # print(true_X.shape)
 
@@ -207,9 +210,9 @@ class HierarchicalDecoder(nn.Module):
         sloss = 0.
         X, D, V, AD = self.init_coords(hS, mask)
         X = X.detach().clone()
-        dloss = self.huber_loss(D, true_D)
-        vloss = self.mse_loss(V, true_V)
-        aloss = self.mse_loss(AD, true_AD)
+        # dloss = self.huber_loss(D, true_D)
+        # vloss = self.mse_loss(V, true_V)
+        # aloss = self.mse_loss(AD, true_AD)
         
         # print(T_max-T_min+1)
         for t in range(T_min, T_max + 1):
@@ -243,11 +246,11 @@ class HierarchicalDecoder(nn.Module):
                 # vloss = vloss + self.mse_loss(V, true_V)
                 # aloss = aloss + self.mse_loss(AD, true_AD)
 
-        dloss = torch.sum(dloss * mask_2D) / mask_2D.sum()
-        vloss = torch.sum(vloss * mask.unsqueeze(-1)) / mask.sum()
-        aloss = torch.sum(aloss * mask.unsqueeze(-1)) / mask.sum()
+        # dloss = torch.sum(dloss * mask_2D) / mask_2D.sum()
+        # vloss = torch.sum(vloss * mask.unsqueeze(-1)) / mask.sum()
+        # aloss = torch.sum(aloss * mask.unsqueeze(-1)) / mask.sum()
         sloss = sloss.sum() / cmask.sum()
-        loss = sloss + dloss + vloss + aloss
+        # loss = sloss + dloss + vloss + aloss
         return sloss
 
     def log_prob(self, true_S, true_cdr, mask):
