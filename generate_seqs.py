@@ -32,7 +32,7 @@ class Generator:
                 cdr3, ppl, _ = self.model.generate(self.hS, self.hL, self.hmask, return_ppl=True)
                 enrichment = get_stacked_prediction(cdr3).item()
 
-                if (enrichment > threshold):
+                if (enrichment > threshold and '#' not in cdr3[0]):
                     cdrs.append(cdr3[0])
                     enrichment_scores.append(enrichment)
 

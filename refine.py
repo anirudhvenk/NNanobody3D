@@ -33,11 +33,11 @@ for epoch in range(5):
     
     if epoch == 0:
         generator = Generator(f'graph_generation/weights/refine/model.init')
-        generator.generate_sequences(100, 0.5, 0)
+        generator.generate_sequences(1000, 0.5, 0)
         model_ckpt, opt_ckpt, model_args = torch.load(f'graph_generation/weights/refine/model.init', map_location=device)
     else:
         generator = Generator(f'graph_generation/weights/refine/model.ckpt.{epoch}')
-        generator.generate_sequences(100, 0.5, epoch)
+        generator.generate_sequences(1000, 0.5, epoch)
         model_ckpt, opt_ckpt, model_args = torch.load(f'graph_generation/weights/refine/model.ckpt.{epoch}', map_location=device)
         
     model = HierarchicalDecoder(model_args).to(device)
