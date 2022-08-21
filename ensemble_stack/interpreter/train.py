@@ -1,3 +1,4 @@
+from inspect import stack
 import numpy as np
 import pandas as pd
 import os
@@ -6,19 +7,17 @@ import torch.optim as optim
 from torch import nn
 from torch.utils.data import DataLoader
 from data import *
-from ensemble_stack.interpreter.model import Interpreter
-import sys
+from model import Interpreter
 
 if torch.cuda.is_available():
-    device = torch.device('cuda:0')
+    device = torch.device('cuda')
 else:
-    device = torch.device('mps')
-
+    device = torch.device('cpu')
 
 if __name__ == '__main__':
-    validation_loader = DataLoader(SampleData(), batch_size=100)
     loaded_models = load_all_models()
-    output = get_stacked_predictions(loaded_models, validation_loader)
+    output = get_stacked_predictions(loaded_models)
+    
     stacked_dataset = pd.DataFrame(
         columns=list(loaded_models.keys()), data=output)
 
@@ -45,4 +44,5 @@ if __name__ == '__main__':
 
         print(epoch+1, train_loss / len(interpreter_loader.sampler))
 
-    torch.save(interpreter.state_dict(), 'weights/interpret_16x1.pth')
+    torch.save(interpreter.state_dict(), 'weights/interpret_27x1_positive.pth')
+    

@@ -2,7 +2,6 @@ import os
 import torch
 import torch.optim as optim
 from torch import nn
-from torch.utils.data import DataLoader
 
 
 class Seq_32_32(nn.Module):
@@ -110,3 +109,63 @@ class Seq_embed_32x1_16(nn.Module):
 
     def forward(self, x):
         return self.seq_embed_32x1_16(x)
+    
+
+class Seq_LSTM_32x1_16(nn.Module):
+    def __init__(self):
+        super(Seq_LSTM_32x1_16, self).__init__()
+        
+        self.lstm = nn.LSTM(input_size=20, hidden_size=32, batch_first=True, bidirectional=True)
+        self.body = nn.Sequential(
+            nn.Linear(64, 16),
+            nn.Linear(16, 1)
+        )
+
+    def forward(self, x):
+        h0 = torch.zeros(2, x.size(0), 32)
+        c0 = torch.zeros(2, x.size(0), 32)
+        
+        out, _ = self.lstm(x, (h0, c0))
+        out = self.body(out[:, -1, :])
+     
+        return out
+    
+    
+class Seq_LSTM_32x2_16(nn.Module):
+    def __init__(self):
+        super(Seq_LSTM_32x2_16, self).__init__()
+        
+        self.lstm = nn.LSTM(input_size=20, hidden_size=32, num_layers=2, batch_first=True, bidirectional=True)
+        self.body = nn.Sequential(
+            nn.Linear(64, 16),
+            nn.Linear(16, 1)
+        )
+
+    def forward(self, x):
+        h0 = torch.zeros(4, x.size(0), 32)
+        c0 = torch.zeros(4, x.size(0), 32)
+        
+        out, _ = self.lstm(x, (h0, c0))
+        out = self.body(out[:, -1, :])
+     
+        return out
+    
+    
+class Seq_LSTM_64x1_16(nn.Module):
+    def __init__(self):
+        super(Seq_LSTM_64x1_16, self).__init__()
+        
+        self.lstm = nn.LSTM(input_size=20, hidden_size=64, batch_first=True, bidirectional=True)
+        self.body = nn.Sequential(
+            nn.Linear(128, 16),
+            nn.Linear(16, 1)
+        )
+
+    def forward(self, x):
+        h0 = torch.zeros(2, x.size(0), 64)
+        c0 = torch.zeros(2, x.size(0), 64)
+        
+        out, _ = self.lstm(x, (h0, c0))
+        out = self.body(out[:, -1, :])
+     
+        return out

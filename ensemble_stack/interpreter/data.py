@@ -8,6 +8,10 @@ from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 from ensemble_stack.regression.models import *
 from ensemble_stack.regression.data import *
+# import sys
+# sys.path.append('../')
+# from regression.models import *
+# from regression.data import *
 
 if torch.cuda.is_available():
     device = torch.device('cuda:0')
@@ -35,26 +39,42 @@ def load_all_models():
         'Full Regression:seq_embed_32x1_16': Seq_embed_32x1_16().to(device),
         'Hold out Regression:seq_embed_32x1_16': Seq_embed_32x1_16().to(device),
         'Hold out Top 4%:seq_embed_32x1_16': Seq_embed_32x1_16().to(device),
+        'Full Regression:seq_LSTM_32x1_16': Seq_LSTM_32x1_16().to(device),
+        'Hold out Regression:seq_LSTM_32x1_16': Seq_LSTM_32x1_16().to(device),
+        'Hold out Top 4%:seq_LSTM_32x1_16': Seq_LSTM_32x1_16().to(device),
+        'Full Regression:seq_LSTM_32x2_16': Seq_LSTM_32x2_16().to(device),
+        'Hold out Regression:seq_LSTM_32x2_16': Seq_LSTM_32x2_16().to(device),
+        'Hold out Top 4%:seq_LSTM_32x2_16': Seq_LSTM_32x2_16().to(device),
+        'Full Regression:seq_LSTM_64x1_16': Seq_LSTM_64x1_16().to(device),
+        'Hold out Regression:seq_LSTM_64x1_16': Seq_LSTM_64x1_16().to(device),
+        'Hold out Top 4%:seq_LSTM_64x1_16': Seq_LSTM_64x1_16().to(device),
     }
     
     for key in loaded_models:
         dataset = key.split(':')[0]
         model = key.split(':')[1]
         
-        # print(os.getcwd())
         loaded_models[key].load_state_dict(torch.load(f'ensemble_stack/regression/weights/{dataset}/{model}.pth'))
         loaded_models[key].eval
     
     return loaded_models
 
 
-def get_stacked_predictions(model_list, dataset):
+def get_stacked_predictions(model_list):
     output = []
     for idx, model in enumerate(model_list.values()):
+        if idx > 17:
+            dataset = DataLoader(SampleData(lstm=True), batch_size=100)
+        else:
+            dataset = DataLoader(SampleData(), batch_size=100)
+            
+        model.eval()
+        
         predictions = []
         for step, data in enumerate(dataset):
             inputs, labels = data
-            inputs, labels = inputs.to(device), labels.to(device)
+            if idx <=17:
+                inputs, labels = inputs.to(device), labels.to(device)
             out = model(inputs).flatten()
 
             predictions.append(out.tolist())
@@ -99,14 +119,17 @@ class InterpreterData(Dataset):
 
  
 class SampleData(Dataset):
-    def __init__(self):
+    def __init__(self, lstm=False):
         raw_seqs = np.loadtxt(
             'data/Test set Regression/test.tsv', dtype='str')[:, 1]
         enrichment = np.loadtxt(
             'data/Test set Regression/test_target.txt')
         enrichment = enrichment.reshape(enrichment.shape[0], 1)
         mapper = load_mapper('data/mapper')
-        self.x = torch.stack([one_hot_encode(seq, mapper) for seq in raw_seqs])
+        if lstm:
+            self.x = torch.stack([one_hot_encode(seq, mapper) for seq in raw_seqs]).reshape(-1, 20, 20)
+        else:
+            self.x = torch.stack([one_hot_encode(seq, mapper) for seq in raw_seqs])
         self.y = torch.from_numpy(np.vstack([x for x in enrichment]))
         self.n_samples = len(raw_seqs)
         

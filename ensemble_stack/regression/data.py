@@ -23,15 +23,17 @@ def one_hot_encode(seq, mapper):
 
 
 class FullRegression(Dataset):
-    def __init__(self):
+    def __init__(self, lstm=False):
         raw_seqs = np.loadtxt(
             'data/Full Regression/data.tsv', dtype='str')[:, 1]
         enrichment = np.loadtxt(
             'data/Full Regression/data.target')
         enrichment = enrichment.reshape(enrichment.shape[0], 1)
         mapper = load_mapper('data/mapper')
-        self.x = torch.stack([one_hot_encode(seq, mapper) for seq in raw_seqs])
-
+        if lstm:
+            self.x = torch.stack([one_hot_encode(seq, mapper) for seq in raw_seqs]).reshape(-1, 20, 20)
+        else:
+            self.x = torch.stack([one_hot_encode(seq, mapper) for seq in raw_seqs])
         self.y = torch.from_numpy(enrichment)
         self.n_samples = len(raw_seqs)
 
@@ -43,14 +45,17 @@ class FullRegression(Dataset):
 
 
 class HoldOutRegression(Dataset):
-    def __init__(self):
+    def __init__(self, lstm=False):
         raw_seqs = np.loadtxt(
             'data/Hold out Regression/data.tsv', dtype='str')[:, 1]
         enrichment = np.loadtxt(
             'data/Hold out Regression/data.target')
         enrichment = enrichment.reshape(enrichment.shape[0], 1)
         mapper = load_mapper('data/mapper')
-        self.x = torch.stack([one_hot_encode(seq, mapper) for seq in raw_seqs])
+        if lstm:
+            self.x = torch.stack([one_hot_encode(seq, mapper) for seq in raw_seqs]).reshape(-1, 20, 20)
+        else:
+            self.x = torch.stack([one_hot_encode(seq, mapper) for seq in raw_seqs])
         self.y = torch.from_numpy(enrichment)
         self.n_samples = len(raw_seqs)
 
@@ -62,13 +67,15 @@ class HoldOutRegression(Dataset):
 
 
 class HoldOutTop(Dataset):
-    def __init__(self):
-        raw_seqs = np.loadtxt(
-            'data/Hold out Top 4%/data.tsv', dtype='str')[:, 1]
+    def __init__(self, lstm=False):
+        raw_seqs = np.loadtxt('data/Hold out Top 4%/data.tsv', dtype='str')[:, 1]
         enrichment = np.loadtxt('data/Hold out Top 4%/data.target')
         enrichment = enrichment.reshape(enrichment.shape[0], 1)
         mapper = load_mapper('data/mapper')
-        self.x = torch.stack([one_hot_encode(seq, mapper) for seq in raw_seqs])
+        if lstm:
+            self.x = torch.stack([one_hot_encode(seq, mapper) for seq in raw_seqs]).reshape(-1, 20, 20)
+        else:
+            self.x = torch.stack([one_hot_encode(seq, mapper) for seq in raw_seqs])
         self.y = torch.from_numpy(enrichment)
         self.n_samples = len(raw_seqs)
 
@@ -80,34 +87,17 @@ class HoldOutTop(Dataset):
 
 
 class Validation(Dataset):
-    def __init__(self):
+    def __init__(self, lstm=False):
         raw_seqs = np.loadtxt(
-            'data/Test set Regression/test.tsv', dtype='str')[:, 1]
+            'data/Test set Regression/data.tsv', dtype='str')[:, 1]
         enrichment = np.loadtxt(
-            'data/Test set Regression/test_target.txt')
+            'data/Test set Regression/data.target')
         enrichment = enrichment.reshape(enrichment.shape[0], 1)
         mapper = load_mapper('data/mapper')
-        self.x = torch.stack([one_hot_encode(seq, mapper) for seq in raw_seqs])
-        self.y = torch.from_numpy(np.vstack([x for x in enrichment]))
-        self.n_samples = len(raw_seqs)
-        
-
-    def __getitem__(self, index):
-        return self.x[index].float(), self.y[index].float()
-
-    def __len__(self):
-        return self.n_samples
-    
-    
-class ValidationInterpreter(Dataset):
-    def __init__(self):
-        raw_seqs = np.loadtxt(
-            'regression/data/Test set Regression/test.tsv', dtype='str')[:, 1]
-        enrichment = np.loadtxt(
-            'regression/data/Test set Regression/test_target.txt')
-        enrichment = enrichment.reshape(enrichment.shape[0], 1)
-        mapper = load_mapper('regression/data/mapper')
-        self.x = torch.stack([one_hot_encode(seq, mapper) for seq in raw_seqs])
+        if lstm:
+            self.x = torch.stack([one_hot_encode(seq, mapper) for seq in raw_seqs]).reshape(-1, 20, 20)
+        else:
+            self.x = torch.stack([one_hot_encode(seq, mapper) for seq in raw_seqs])
         self.y = torch.from_numpy(np.vstack([x for x in enrichment]))
         self.n_samples = len(raw_seqs)
         

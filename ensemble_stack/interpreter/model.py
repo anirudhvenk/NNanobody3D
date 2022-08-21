@@ -4,7 +4,7 @@ class Interpreter(nn.Module):
     def __init__(self):
         super(Interpreter, self).__init__()
         self.interpreter = nn.Sequential(
-            nn.Linear(18, 16),
+            nn.Linear(27, 16),
             nn.ReLU(),
             nn.Linear(16, 1)
         )

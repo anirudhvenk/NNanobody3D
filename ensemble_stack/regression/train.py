@@ -3,19 +3,20 @@ import torch
 import torch.optim as optim
 from torch import nn
 from torch.utils.data import DataLoader
-from ensemble_stack.regression.models import *
+from models import *
 from data import *
 
 
 if torch.cuda.is_available():
-    device = torch.device('cuda:0')
+    device = torch.device('cuda')
 else:
-    device = torch.device('mps')
+    device = torch.device('cpu')
 
 
-def train(model, training_loader, validation_loader):
+def train(model, dataset, model_name, training_loader, validation_loader):
     optimizer = optim.Adam(model.parameters())
     loss_fn = torch.nn.MSELoss()
+    cur_val_loss = 10000
 
     for epoch in range(20):
         val_loss = 0.0
@@ -23,7 +24,7 @@ def train(model, training_loader, validation_loader):
 
         for step, data in enumerate(training_loader):
             inputs, labels = data
-            inputs, labels = inputs.to(device), labels.to(device)
+            inputs, labels = inputs, labels
 
             optimizer.zero_grad()
             outputs = model(inputs)
@@ -43,9 +44,12 @@ def train(model, training_loader, validation_loader):
 
                 val_loss += loss.item()*len(inputs)
 
-        print(epoch+1, train_loss / len(training_loader.sampler),
-              val_loss / len(validation_loader.sampler))
-    return model
+        print(epoch+1, train_loss / len(training_loader.sampler), val_loss / len(validation_loader.sampler))
+        
+        if val_loss < cur_val_loss:
+            cur_val_loss = val_loss
+            print('saving model')
+            torch.save(model.state_dict(), f'positive_weights/{dataset}/{model_name}.pth')
 
 
 if __name__ == '__main__':
@@ -57,32 +61,29 @@ if __name__ == '__main__':
     validation_loader = DataLoader(Validation(), batch_size=100)
 
     for key in training_datasets:
-        print('Training Seq_32_32:')
-        model = train(Seq_32_32().to(device),
-                      training_datasets[key], validation_loader)
-        torch.save(model.state_dict(), f'weights/{key}/seq_32_32.pth')
+        print('Training Seq_32_32 on {}'.format(key))
+        train(Seq_32_32().to(device), key, 'seq_32_32', training_datasets[key], validation_loader)
 
-        print('Training Seq_32x1_16:')
-        model = train(Seq_32x1_16().to(device),
-                      training_datasets[key], validation_loader)
-        torch.save(model.state_dict(), f'weights/{key}/seq_32x1_16.pth')
+        print('Training Seq_32x1_16 on {}'.format(key))
+        train(Seq_32x1_16().to(device), key, 'seq_32x1_16', training_datasets[key], validation_loader)
 
-        print('Training Seq_32x1_16_filt3:')
-        model = train(Seq_32x1_16_filt3().to(device),
-                      training_datasets[key], validation_loader)
-        torch.save(model.state_dict(), f'weights/{key}/seq_32x1_16_filt3.pth')
+        print('Training Seq_32x1_16_filt3 on {}'.format(key))
+        train(Seq_32x1_16_filt3().to(device), key, 'seq_32x1_16_filt3', training_datasets[key], validation_loader)
 
-        print('Training Seq_32x2_16:')
-        model = train(Seq_32x2_16().to(device),
-                      training_datasets[key], validation_loader)
-        torch.save(model.state_dict(), f'weights/{key}/seq_32x2_16.pth')
+        print('Training Seq_32x2_16 on {}'.format(key))
+        train(Seq_32x2_16().to(device), key, 'seq_32x2_16', training_datasets[key], validation_loader)
 
-        print('Training Seq_64x1_16:')
-        model = train(Seq_64x1_16().to(device),
-                      training_datasets[key], validation_loader)
-        torch.save(model.state_dict(), f'weights/{key}/seq_64x1_16.pth')
+        print('Training Seq_64x1_16 on {}'.format(key))
+        train(Seq_64x1_16().to(device), key, 'seq_64x1_16', training_datasets[key], validation_loader)
 
-        print('Training Seq_embed_32x1_16:')
-        model = train(Seq_embed_32x1_16().to(device),
-                      training_datasets[key], validation_loader)
-        torch.save(model.state_dict(), f'weights/{key}/seq_embed_32x1_16.pth')
+        print('Training Seq_embed_32x1_16 on {}'.format(key))
+        train(Seq_embed_32x1_16().to(device), key, 'seq_embed_32x1_16', training_datasets[key], validation_loader)
+
+        print('Training Seq_LSTM_32x1_16 on {}'.format(key))
+        train(Seq_LSTM_32x1_16().to(device), key, 'seq_LSTM_32x1_16', training_datasets[key], validation_loader)
+        
+        print('Training Seq_LSTM_32x2_16 on {}'.format(key))
+        train(Seq_LSTM_32x2_16().to(device), key, 'seq_LSTM_32x1_16', training_datasets[key], validation_loader)
+        
+        print('Training Seq_LSTM_64x1_16 on {}'.format(key))
+        train(Seq_LSTM_64x1_16().to(device), key, 'seq_LSTM_64x1_16', training_datasets[key], validation_loader)
