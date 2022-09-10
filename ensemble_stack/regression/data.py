@@ -89,9 +89,9 @@ class HoldOutTop(Dataset):
 class Validation(Dataset):
     def __init__(self, lstm=False):
         raw_seqs = np.loadtxt(
-            'data/Test set Regression/data.tsv', dtype='str')[:, 1]
+            'data/Test set Regression/test.tsv', dtype='str')[:, 1]
         enrichment = np.loadtxt(
-            'data/Test set Regression/data.target')
+            'data/Test set Regression/test_target.txt')
         enrichment = enrichment.reshape(enrichment.shape[0], 1)
         mapper = load_mapper('data/mapper')
         if lstm:

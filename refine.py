@@ -28,16 +28,16 @@ else:
 
 # TODO: similarity scoring (alphafold?)
 
-for epoch in range(5):
+for epoch in range(20):
     print("Generating sequences...")
     
     if epoch == 0:
         generator = Generator(f'graph_generation/weights/refine/model.init')
-        generator.generate_sequences(1000, 0.5, 0)
+        generator.generate_sequences(20000, 0.5, 0)
         model_ckpt, opt_ckpt, model_args = torch.load(f'graph_generation/weights/refine/model.init', map_location=device)
     else:
         generator = Generator(f'graph_generation/weights/refine/model.ckpt.{epoch}')
-        generator.generate_sequences(1000, 0.5, epoch)
+        generator.generate_sequences(20000, 0.5, epoch)
         model_ckpt, opt_ckpt, model_args = torch.load(f'graph_generation/weights/refine/model.ckpt.{epoch}', map_location=device)
         
     model = HierarchicalDecoder(model_args).to(device)
@@ -47,8 +47,6 @@ for epoch in range(5):
 
     data = pd.read_csv(f'graph_generation/data/generated/3eak_gen_{epoch}.tsv', sep='\t')
     generated_sequences = data['cdr3'].tolist()
-    framework = 'QVQLVESGGGLVQPGGSLRLSCAASGGSEYSYSTFSLGWFRQAPGQGLEAVAAIASMGGLTYYADSVKGRFTISRDNSKNTLYLQMNSLRAEDTAVYYCWGQGTLVTVS'
-
     
     print("Training on previously generated sequences...")
 

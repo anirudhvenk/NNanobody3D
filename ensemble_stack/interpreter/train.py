@@ -44,5 +44,5 @@ if __name__ == '__main__':
 
         print(epoch+1, train_loss / len(interpreter_loader.sampler))
 
-    torch.save(interpreter.state_dict(), 'weights/interpret_27x1_positive.pth')
+    torch.save(interpreter.state_dict(), 'weights/interpret_27_16.pth')
     

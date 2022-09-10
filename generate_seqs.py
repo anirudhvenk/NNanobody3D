@@ -23,19 +23,32 @@ class Generator:
         self.model.eval()
         
     
-
-    def generate_sequences(self, num_sequences, threshold,  generation):
+    def generate_sequences(self, num_sequences, threshold, generation):
         with torch.no_grad():
-            cdrs = []
-            enrichment_scores = []
+            all_cdrs = []
+            all_ppl_scores = []
+            best_cdrs = []
+            best_ppl = []
+
             for i in tqdm(range(num_sequences)):
                 cdr3, ppl, _ = self.model.generate(self.hS, self.hL, self.hmask, return_ppl=True)
-                enrichment = get_stacked_prediction(cdr3).item()
+                if ('#' not in cdr3[0]) and ('C' not in cdr3[0]) and ('N' not in cdr3[0]):
+                    # enrichment = get_stacked_prediction(cdr3).item()
 
-                if (enrichment > threshold and '#' not in cdr3[0]):
-                    cdrs.append(cdr3[0])
-                    enrichment_scores.append(enrichment)
+                    # if (enrichment > threshold and 'N' not in cdr3[0] and 'C' not in cdr3[0]):
+                    all_cdrs.append(cdr3[0])
+                    # enrichment_scores.append(enrichment)
+                    all_ppl_scores.append(ppl.item())
 
-            generated = pd.DataFrame({'cdr3': cdrs, 'enrichment': enrichment_scores})
+            all_enrichment_scores = get_stacked_prediction(all_cdrs).detach().cpu().flatten()
+            best_enrichment = []
+            
+            for cdr, enrichment, ppl in zip(all_cdrs, all_enrichment_scores, all_ppl_scores):
+                if enrichment.item() > threshold:
+                    best_cdrs.append(cdr)
+                    best_ppl.append(ppl)
+                    best_enrichment.append(enrichment.item())
+            
+            generated = pd.DataFrame({'cdr3': best_cdrs, 'enrichment': best_enrichment, 'perplexity': best_ppl})
             generated.to_csv(
                 f'graph_generation/data/generated/3eak_gen_{generation}.tsv', index=False, sep='\t')

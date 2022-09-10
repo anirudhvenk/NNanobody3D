@@ -14,9 +14,9 @@ from ensemble_stack.regression.data import *
 # from regression.data import *
 
 if torch.cuda.is_available():
-    device = torch.device('cuda:0')
+    device = torch.device('cuda')
 else:
-    device = torch.device('mps')
+    device = torch.device('cpu')
 
 
 def load_all_models():
@@ -55,6 +55,7 @@ def load_all_models():
         model = key.split(':')[1]
         
         loaded_models[key].load_state_dict(torch.load(f'ensemble_stack/regression/weights/{dataset}/{model}.pth'))
+        # loaded_models[key].load_state_dict(torch.load(f'../regression/weights/{dataset}/{model}.pth'))
         loaded_models[key].eval
     
     return loaded_models

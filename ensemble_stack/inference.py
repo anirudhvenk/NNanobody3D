@@ -14,7 +14,7 @@ if torch.cuda.is_available():
 else:
     device = torch.device('cpu')
 
-def get_stacked_prediction_full(sequences):
+def get_stacked_prediction(sequences):
     sequences = [seq.center(20, 'J') for seq in sequences]
     model_list = load_all_models()
     output = []
@@ -32,5 +32,5 @@ def get_stacked_prediction_full(sequences):
     output = output.reshape(output.shape[0], output.shape[1]).T
     
     interpreter = Interpreter().to(device)
-    interpreter.load_state_dict(torch.load('ensemble_stack/interpreter/weights/interpret_16x1_new.pth', map_location=device))
+    interpreter.load_state_dict(torch.load('ensemble_stack/interpreter/weights/interpret_27_16.pth', map_location=device))
     return(interpreter(torch.from_numpy(output).to(device)))
