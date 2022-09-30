@@ -122,9 +122,8 @@ class Seq_LSTM_32x1_16(nn.Module):
         )
 
     def forward(self, x):
-        x = x.cuda()
-        h0 = torch.zeros(2, x.size(0), 32).cuda()
-        c0 = torch.zeros(2, x.size(0), 32).cuda()
+        h0 = torch.zeros(2, x.size(0), 32)
+        c0 = torch.zeros(2, x.size(0), 32)
         
         out, _ = self.lstm(x, (h0, c0))
         out = self.body(out[:, -1, :])
@@ -143,9 +142,8 @@ class Seq_LSTM_32x2_16(nn.Module):
         )
 
     def forward(self, x):
-        x = x.cuda()
-        h0 = torch.zeros(4, x.size(0), 32).cuda()
-        c0 = torch.zeros(4, x.size(0), 32).cuda()
+        h0 = torch.zeros(4, x.size(0), 32)
+        c0 = torch.zeros(4, x.size(0), 32)
         
         out, _ = self.lstm(x, (h0, c0))
         out = self.body(out[:, -1, :])
@@ -164,9 +162,8 @@ class Seq_LSTM_64x1_16(nn.Module):
         )
 
     def forward(self, x):
-        x = x.cuda()
-        h0 = torch.zeros(2, x.size(0), 64).cuda()
-        c0 = torch.zeros(2, x.size(0), 64).cuda()
+        h0 = torch.zeros(2, x.size(0), 64)
+        c0 = torch.zeros(2, x.size(0), 64)
         
         out, _ = self.lstm(x, (h0, c0))
         out = self.body(out[:, -1, :])
