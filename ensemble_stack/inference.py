@@ -30,6 +30,7 @@ def get_stacked_prediction(sequences):
         output[idx].append(predictions)
     output = np.vstack(output)
     output = output.reshape(output.shape[0], output.shape[1]).T
+    print(output)
     
     interpreter = Interpreter().to(device)
     interpreter.load_state_dict(torch.load('ensemble_stack/interpreter/weights/interpret_27_16.pth', map_location=device))
